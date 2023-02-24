@@ -14,14 +14,14 @@ if __name__ == "__main__":
     todos = response.json()
     employee_name = requests.get(
         "https://jsonplaceholder.typicode.com/users/{}".format(
-        argv[1])).json().get("name")
+            argv[1])).json().get("name")
 
     total_tasks = len(todos)
     completed_tasks = sum(1 for task in todos if task.get("completed"))
 
     print(
         "Employee {} is done with tasks({}/{}):".format(
-        employee_name, completed_tasks, total_tasks))
+            employee_name, completed_tasks, total_tasks))
 
     for task in todos:
         if task.get("completed"):
