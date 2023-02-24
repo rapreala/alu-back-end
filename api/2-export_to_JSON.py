@@ -1,33 +1,27 @@
 #!/usr/bin/python3
-"""
-Python script that, using the provided REST API, for a given employee ID,
-returns information about his/her TODO list progress.
-"""
+""""Module"""
 
-import requests
 import json
-from sys import argv
+import requests
+import sys
 
+if __name__ == '__main__':
+    employee_id = sys.argv[1]
+    user_url = "https://jsonplaceholder.typicode.com/users/{}" \
+        .format(employee_id)
+    todos_url = "https://jsonplaceholder.typicode.com/users/{}/todos/" \
+        .format(employee_id)
 
-if __name__ == "__main__":
-    url = "https://jsonplaceholder.typicode.com/users/{}/todos".format(
-        argv[1])
-    response = requests.get(url)
-    todos = response.json()
-    employee_name = requests.get(
-        "https://jsonplaceholder.typicode.com/users/{}".format(
-            argv[1])).json().get("name")
+    user_info = requests.request('GET', user_url).json()
+    todos_info = requests.request('GET', todos_url).json()
 
-    tasks = []
-    for task in todos:
-        task_dict = {
-            "task": task.get("title"),
-            "completed": task.get("completed"),
-            "username": employee_name
-        }
-        tasks.append(task_dict)
+    employee_username = user_info["username"]
 
-    data = {argv[1]: tasks}
-    file_name = "{}.json".format(argv[1])
-    with open(file_name, 'w') as f:
-        json.dump(data, f)
+    todos_info_sorted = [
+        dict(zip(["task", "completed", "username"],
+                 [task["title"], task["completed"], employee_username]))
+        for task in todos_info]
+
+    user_dict = {str(employee_id): todos_info_sorted}
+    with open(str(employee_id) + '.json', "w") as file:
+        file.write(json.dumps(user_dict))
