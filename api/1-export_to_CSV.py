@@ -1,44 +1,34 @@
 #!/usr/bin/python3
 """
-Export data in CSV format
+Python script that, using the provided REST API, for a given employee ID,
+returns information about his/her TODO list progress and exports it to CSV.
 """
 
-import csv
 import requests
-import sys
+import csv
+from sys import argv
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Please provide an employee ID")
-        sys.exit(1)
+    url = "https://jsonplaceholder.typicode.com/users/{}/todos".format(argv[1])
+    response = requests.get(url)
+    todos = response.json()
+    employee_name = requests.get("https://jsonplaceholder.typicode.com/users/{}".format(argv[1])).json().get("name")
 
-    employee_id = sys.argv[1]
+    total_tasks = len(todos)
+    completed_tasks = sum(1 for task in todos if task.get("completed"))
 
-    try:
-        employee_id = int(employee_id)
-    except ValueError:
-        print("Employee ID must be an integer")
-        sys.exit(1)
+    print("Employee {} is done with tasks({}/{}):".format(employee_name, completed_tasks, total_tasks))
 
-    user_response = requests.get(
-        "https://jsonplaceholder.typicode.com/users/{}".format(employee_id))
-    tasks_response = requests.get(
-        "https://jsonplaceholder.typicode.com/todos?userId={}".format(employee_id))
+    with open('{}.csv'.format(argv[1]), mode='w', newline='') as csv_file:
+        fieldnames = ['USER_ID', 'USERNAME', 'TASK_COMPLETED_STATUS', 'TASK_TITLE']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
 
-    try:
-        user_response.raise_for_status()
-        tasks_response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        print(err)
-        sys.exit(1)
-
-    user = user_response.json()
-    tasks = tasks_response.json()
-
-    with open("{}.csv".format(employee_id), mode='w', newline='') as file:
-        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(["USER_ID", "USERNAME", "TASK_COMPLETED_STATUS", "TASK_TITLE"])
-
-        for task in tasks:
-            writer.writerow([employee_id, user['username'], task['completed'], task['title']])
+        for task in todos:
+            writer.writerow({
+                'USER_ID': argv[1],
+                'USERNAME': employee_name,
+                'TASK_COMPLETED_STATUS': str(task.get("completed")),
+                'TASK_TITLE': task.get("title")
+            })
