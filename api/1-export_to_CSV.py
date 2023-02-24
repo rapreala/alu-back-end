@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Using a given employee ID, exports data in CSV format of all tasks owned by the employee.
+Export data in CSV format
 """
 
 import csv
@@ -9,33 +9,36 @@ import sys
 
 
 if __name__ == "__main__":
-    # Check for correct usage
-    if len(sys.argv) != 2 or not sys.argv[1].isdigit():
-        print(f"Usage: {sys.argv[0]} employee_id")
+    if len(sys.argv) < 2:
+        print("Please provide an employee ID")
         sys.exit(1)
 
-    # Get the employee ID and retrieve the user data
     employee_id = sys.argv[1]
-    user_url = "https://jsonplaceholder.typicode.com/users/" + employee_id
-    user_response = requests.get(user_url)
-    if user_response.status_code != 200:
-        print(f"Failed to get user data: {user_response.status_code}")
+
+    try:
+        employee_id = int(employee_id)
+    except ValueError:
+        print("Employee ID must be an integer")
         sys.exit(1)
-    user_data = user_response.json()
 
-    # Get the TODO list for the employee
-    todo_url = f"https://jsonplaceholder.typicode.com/todos?userId={employee_id}"
-    todo_response = requests.get(todo_url)
-    if todo_response.status_code != 200:
-        print(f"Failed to get TODO list: {todo_response.status_code}")
+    user_response = requests.get(
+        "https://jsonplaceholder.typicode.com/users/{}".format(employee_id))
+    tasks_response = requests.get(
+        "https://jsonplaceholder.typicode.com/todos?userId={}".format(employee_id))
+
+    try:
+        user_response.raise_for_status()
+        tasks_response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        print(err)
         sys.exit(1)
-    todo_data = todo_response.json()
 
-    # Save the TODO list in a CSV file
-    csv_filename = f"{employee_id}.csv"
-    with open(csv_filename, mode="w", newline="") as csv_file:
-        csv_writer = csv.writer(csv_file, quoting=csv.QUOTE_ALL)
-        for task in todo_data:
-            csv_writer.writerow([employee_id, user_data["username"], task["completed"], task["title"]])
+    user = user_response.json()
+    tasks = tasks_response.json()
 
-    print(f"Data exported to {csv_filename} successfully.")
+    with open("{}.csv".format(employee_id), mode='w', newline='') as file:
+        writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["USER_ID", "USERNAME", "TASK_COMPLETED_STATUS", "TASK_TITLE"])
+
+        for task in tasks:
+            writer.writerow([employee_id, user['username'], task['completed'], task['title']])
